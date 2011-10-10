@@ -82,25 +82,49 @@ api.env.post = defaultdict(list)
 
 
 ### Env, Pre, Post decorators.
-def prepare(name):
+def prepare(role):
+    """Decorates a function to run before any other role events.
+    """
     def prepare_decorate(func):
-        api.env.prepare[name].append(func)
+        api.env.prepare[role].append(func)
         return func
     return prepare_decorate
 
 
+def pre(name):
+    """Decorates a function to run before the given event.
+    """
+    def pre_decorate(func):
+        api.env.pre[name].append(func)
+        return func
+    return pre_decorate
+
+
 def post(name):
+    """Decorates a function to run after the given event.
+    """
     def post_decorate(func):
         api.env.post[name].append(func)
         return func
     return post_decorate
 
 
-def pre(name):
-    def pre_decorate(func):
-        api.env.pre[name].append(func)
-        return func
-    return pre_decorate
+def only_for(*roles):
+    """Decorates a function to only run for the specified roles.
+    """
+    roles = set()
+    for role in roles:
+        roles.update(role.split())
+
+    def only_decorate(func):
+        @functools.wraps(func)
+        def run_if_in_role(*args, **kwargs):
+            if api.env.role_string in roles:
+                return func(*args, **kwargs)
+
+        return run_if_in_role
+
+    return only_decorate
 
 
 ### Usermode helpers
