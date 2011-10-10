@@ -513,7 +513,9 @@ def upstart_ensure(name, restart=False):
     """Ensures that the given upstart service is running, restarting it if necessary"""
     if sudo("status "+ name).find("/running") >= 0:
         if restart:
-            sudo("restart " + name)
+            if not isinstance(restart, basestring):
+                restart = 'restart'
+            sudo("%s %s" % (restart, name))
     else:
         sudo("start " + name)
 
@@ -524,7 +526,9 @@ def service_ensure(name, restart=False):
     with api.settings(warn_only = True):
         if sudo("service %s status" % name, combine_stderr=True).find("running") >= 0:
             if restart:
-                sudo("service %s restart" % name)
+                if not isinstance(restart, basestring):
+                    restart = 'restart'
+                sudo("service %s %s" % (name, restart))
         else:
             sudo("service %s start" % name)
 
@@ -628,9 +632,12 @@ def enable_munin_plugin(plugin):
 ### Main Deploy task
 @api.task
 @notifies
-def deploy():
+def deploy(**kwargs):
     """Deploy the specified roles.
     """
+    if kwargs:
+        for role, host in kwargs.iteritems():
+            api.env.roledefs[role] = [host]
     api.env.roledefs['all'] = list(set(host for hosts in api.env.roledefs.itervalues() for host in hosts))
     # default to all roles.
     if not api.env.roles:
