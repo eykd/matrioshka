@@ -9,6 +9,7 @@ setup(
     install_requires = [
         'Fabric',
         'boto',
+        'Paved',
         ],
 
     zip_safe = False,
