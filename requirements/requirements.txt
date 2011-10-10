@@ -1,0 +1,12 @@
+--find-links=http://pypi.crossway.org/matrioshka/index.html
+distribute
+virtualenv
+Paver
+paved
+
+paramiko
+pycrypto
+Fabric
+boto
+
+-r setup.txt
