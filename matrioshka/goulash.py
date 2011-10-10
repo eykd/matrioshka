@@ -509,20 +509,22 @@ def ssh_authorize(user, key):
         file_write(keyf, key, owner=user, group=user)
 
 
-def upstart_ensure(name):
+def upstart_ensure(name, restart=False):
     """Ensures that the given upstart service is running, restarting it if necessary"""
     if sudo("status "+ name).find("/running") >= 0:
-        sudo("restart " + name)
+        if restart:
+            sudo("restart " + name)
     else:
         sudo("start " + name)
 
 
-def service_ensure(name):
+def service_ensure(name, restart=False):
     """Ensures that the given init.d service is running, restarting it if necessary
     """
     with api.settings(warn_only = True):
         if sudo("service %s status" % name, combine_stderr=True).find("running") >= 0:
-            sudo("service %s restart" % name)
+            if restart:
+                sudo("service %s restart" % name)
         else:
             sudo("service %s start" % name)
 
