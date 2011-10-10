@@ -24,6 +24,8 @@
 
     Note, that right now, Goulash only supports Debian-based Linux systems.
 
+    Goulash is derived from Cuisine, by Sebastien Pierre, et al.
+
     .. seealso::
 
        `Deploying Django with Fabric
@@ -48,6 +50,7 @@ import random
 import crypt
 import functools
 import datetime
+import atexit
 
 from collections import defaultdict
 
@@ -65,7 +68,10 @@ UNIX_EOL    = "\n"
 MAC_EOL     = "\n"
 
 api.env.job_queue = []
-api.env.will_flush = False
+api.env.system_packages = defaultdict(list)
+api.env.python_packages = defaultdict(list)
+api.env.firewalls = defaultdict(list)
+
 
 # Environment setup constructors
 api.env.prepare = defaultdict(list)
@@ -382,11 +388,11 @@ def user_check(name):
     """Checks if there is a user defined with the given name, returning its information
     as a '{"name": <str>, "uid": <str>, "gid": <str>, "home": <str>, "shell": <str>}' or 'None' if
     the user does not exists."""
-    d = sudo("cat /etc/passwd | egrep '^%s: ' ; true" % (name))
-    s = sudo("cat /etc/shadow | egrep '^%s: ' | awk -F': ' '{print $2}'" % (name))
+    d = sudo("cat /etc/passwd | egrep '^%s:' ; true" % (name))
+    s = sudo("cat /etc/shadow | egrep '^%s:' | awk -F':' '{print $2}'" % (name))
     results = {}
     if d:
-        d = d.split(": ")
+        d = d.split(":")
         results = dict(name=d[0], uid=d[2], gid=d[3], home=d[5], shell=d[6])
     if s:
         results['passwd']=s
@@ -404,7 +410,7 @@ def user_ensure(name, passwd=None, home=None, uid=None, gid=None, shell=None):
     else:
         options=[]
         if passwd != None and d.get('passwd') != None:
-            method, salt = d.get('passwd').split('$')[1: 3]
+            method, salt = d.get('passwd').split('$')[1:3]
             passwd_crypted = crypt.crypt(passwd, '$%s$%s' % (method, salt))
             if passwd_crypted != d.get('passwd'):
                 options.append("-p '%s'" % (passwd_crypted))
@@ -438,9 +444,9 @@ def group_check(name):
     """Checks if there is a group defined with the given name, returning its information
     as a '{"name": <str>, "gid": <str>, "members": <list[str]>}' or 'None' if the group
     does not exists."""
-    group_data = run("cat /etc/group | egrep '^%s: ' ; true" % (name))
+    group_data = run("cat /etc/group | egrep '^%s:' ; true" % (name))
     if group_data:
-        name, _, gid, members = group_data.split(": ", 4)
+        name, _, gid, members = group_data.split(":", 4)
         return dict(name=name, gid=gid, members=tuple(m.strip() for m in members.split(", ")))
     else:
         return None
@@ -534,14 +540,14 @@ def ls(where):
 
 
 ### Operator Notifications
-def date(message=None, sticky=True):
+def date(message=None, sticky=False):
     """Notify with a message and date.
     """
     now = datetime.datetime.now()
     notify('%s\n%s' % (now, message if message is not None else ''), sticky=sticky)
 
 
-def notify(msg, sticky=True):
+def notify(msg, sticky=False):
     """Send a notification.
     """
     with context_managers.settings(warn_only=True):
@@ -572,6 +578,9 @@ def notifies(sticky=False):
                 msg = "%s\n%s" % (msg, args)
             if kwargs:
                 msg = "%s\n%s" % (msg, kwargs)
+            if getattr(api.env, 'role_string', None):
+                msg = "Role: %s\n%s" % (api.env.role_string, msg)
+            
             date(msg, sticky=sticky)
             return func(*args, **kwargs)
 
@@ -585,20 +594,14 @@ def notifies(sticky=False):
 
 ### Job queue managers
 def enqueue(priority, func, *args, **kwargs):
-    api.env.queue.append((priority, func, args, kwargs))
+    api.env.job_queue.append((priority, func, args, kwargs))
 
 
 def run_queued():
-    for func, args, kwargs in api.env.job_queue:
+    api.env.job_queue.sort()
+    for priority, func, args, kwargs in api.env.job_queue:
         func(*args, **dict(kwargs))
     api.env.job_queue[:] = ()
-
-
-def runqueue():
-    api.env.queue.sort()
-    for priority, func, args, kwargs in api.env.queue:
-        func(*args, **kwargs)
-    api.env.queue[:] = ()
 
 
 def enable_nginx_site(site, source):
@@ -624,8 +627,17 @@ def enable_munin_plugin(plugin):
 @api.task
 @notifies
 def deploy():
-    """Deploy the full site.
+    """Deploy the specified roles.
     """
+    api.env.roledefs['all'] = list(set(host for hosts in api.env.roledefs.itervalues() for host in hosts))
+    # default to all roles.
+    if not api.env.roles:
+        api.env.roles = list(api.env.roledefs.keys())
+
+    # Move 'all' to the front of the list.
+    api.env.roles.sort(lambda a, b: -1 if a == 'all' else 0)
+    notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
+
     for role in api.env.roles:
         print "###########################################"
         print "##### Role:", role
@@ -633,10 +645,14 @@ def deploy():
         print "###########################################"
         api.env.role_string = role
 
+        notify('Deploying to role %s' % role, sticky=False)
+
         for host in api.env.roledefs[api.env.role_string]:
             ## local('paver knock -t {host} -p {knocks}'.format(
             ##     host = host, knocks = ','.join(site['KNOCKS']['ssh'])
             ##     ))
+            notify('Deploying to %s as role %s' % (host, role), sticky=False)
+
             with api.settings(host_string=host):
                 for p in api.env.prepare[api.env.role_string]:
                     p()
@@ -650,9 +666,11 @@ def deploy():
                 for p in api.env.post[api.env.role_string]:
                     p()
 
-                firewall()
+                apply_firewall()
 
-                runqueue()
+                run_queued()
+
+    notify('Deployed to %s.\nDone.' % ', '.join(api.env.roles), sticky=False)
 
 
 ### Deploy helpers
@@ -684,12 +702,15 @@ def install_python_packages():
 
 
 @notifies
-def firewall():
-    """Install firewall.
+def apply_firewall():
+    """Apply firewall rules.
     """
-    for command in api.env.firewalls[api.env.role_string]:
-        if command.startswith('$'):
-            sudo(command[1:])
-        else:
-            sudo('ufw %s' % command)
-    sudo('ufw reload')
+    if command_check('ufw'):
+        firewalls = api.env.firewalls[api.env.role_string]
+        for command in firewalls:
+            if command.startswith('$'):
+                sudo(command[1:])
+            else:
+                sudo('ufw %s' % command)
+        if firewalls:
+            sudo('ufw reload')

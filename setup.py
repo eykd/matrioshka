@@ -15,7 +15,7 @@ setup(
     zip_safe = False,
 
     version = "0.1",
-    description = ".",
+    description = "Mother brain for deploying applications with Fabric. Batteries included.",
     author = "David Eyk",
     author_email = "david.eyk@gmail.com",
     url = "http://github.com/eykd/matrioshka",
