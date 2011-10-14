@@ -72,16 +72,30 @@ api.env.system_packages = defaultdict(list)
 api.env.python_packages = defaultdict(list)
 api.env.firewalls = defaultdict(list)
 
+# Pre-deployment
+api.env.on_start = []
+# Post-deployment
+api.env.on_stop = []
 
 # Environment setup constructors
 api.env.prepare = defaultdict(list)
 # Pre-package/role constructors
-api.env.pre = defaultdict(list)
+api.env.before = defaultdict(list)
 # Post-package/role constructors
-api.env.post = defaultdict(list)
+api.env.after = defaultdict(list)
 
 
 ### Env, Pre, Post decorators.
+def on_start(func):
+    api.env.on_start.append(func)
+    return func
+
+
+def on_stop(func):
+    api.env.on_stop.append(func)
+    return func
+
+
 def prepare(role):
     """Decorates a function to run before any other role events.
     """
@@ -91,22 +105,22 @@ def prepare(role):
     return prepare_decorate
 
 
-def pre(name):
+def before(name):
     """Decorates a function to run before the given event.
     """
-    def pre_decorate(func):
-        api.env.pre[name].append(func)
+    def before_decorate(func):
+        api.env.before[name].append(func)
         return func
-    return pre_decorate
+    return before_decorate
 
 
-def post(name):
+def after(name):
     """Decorates a function to run after the given event.
     """
-    def post_decorate(func):
-        api.env.post[name].append(func)
+    def after_decorate(func):
+        api.env.after[name].append(func)
         return func
-    return post_decorate
+    return after_decorate
 
 
 def only_for(*roles):
@@ -671,6 +685,9 @@ def deploy(**kwargs):
     api.env.roles.sort(lambda a, b: -1 if a == 'all' else 0)
     notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
 
+    for start in api.env.on_start:
+        start()
+
     for role in api.env.roles:
         print "###########################################"
         print "##### Role:", role
@@ -690,18 +707,21 @@ def deploy(**kwargs):
                 for p in api.env.prepare[api.env.role_string]:
                     p()
                     
-                for p in api.env.pre[api.env.role_string]:
+                for p in api.env.before[api.env.role_string]:
                     p()
 
                 install_system_packages()
                 install_python_packages()
 
-                for p in api.env.post[api.env.role_string]:
+                for p in api.env.after[api.env.role_string]:
                     p()
 
                 apply_firewall()
 
                 run_queued()
+
+    for stop in api.env.on_stop:
+        stop()
 
     notify('Deployed to %s.\nDone.' % ', '.join(api.env.roles), sticky=False)
 
@@ -714,14 +734,14 @@ def install_system_packages():
     package_update()
     packages = api.env.system_packages.get(api.env.role_string, ())
     for package in packages:
-        for p in api.env.pre[package]:
+        for p in api.env.before[package]:
             p()
 
     if packages:
         package_install(packages)
 
     for package in packages:
-        for p in api.env.post[package]:
+        for p in api.env.after[package]:
             p()
 
 
