@@ -50,7 +50,8 @@ import random
 import crypt
 import functools
 import datetime
-import atexit
+import socket
+import time
 
 from collections import defaultdict
 
@@ -83,6 +84,8 @@ api.env.prepare = defaultdict(list)
 api.env.before = defaultdict(list)
 # Post-package/role constructors
 api.env.after = defaultdict(list)
+
+api.env.knocks = {}
 
 
 ### Env, Pre, Post decorators.
@@ -667,6 +670,22 @@ def enable_munin_plugin(plugin):
     mode_user()
 
 
+@api.task
+def knock(host, *ports):
+    """Knock on servers to open up ssh.
+    """
+    for port in ports:
+        #create an INET, STREAMing socket
+        print "Knocking on", host, port
+        try:
+            s = socket.socket(proto=socket.SOL_TCP)
+            s.settimeout(1)
+            s.connect((host, int(port)))
+        except socket.timeout:
+            print "Knock..."
+        time.sleep(1)
+    
+
 ### Main Deploy task
 @api.task
 @notifies
@@ -682,7 +701,7 @@ def deploy(**kwargs):
         api.env.roles = list(api.env.roledefs.keys())
 
     # Move 'all' to the front of the list.
-    api.env.roles.sort(lambda a, b: -1 if a == 'all' else 0)
+    api.env.roles.sort(lambda a, b: -1 if a == 'all' else cmp(a, b))
     notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
 
     for start in api.env.on_start:
@@ -702,6 +721,9 @@ def deploy(**kwargs):
             ##     host = host, knocks = ','.join(site['KNOCKS']['ssh'])
             ##     ))
             notify('Deploying to %s as role %s' % (host, role), sticky=False)
+
+            if host in api.env.knocks:
+                knock(host, *api.env.knocks[host])
 
             with api.settings(host_string=host):
                 for p in api.env.prepare[api.env.role_string]:
