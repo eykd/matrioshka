@@ -66,7 +66,7 @@ MODE        = "user"
 RE_SPACES   = re.compile("[\s\t]+")
 WINDOWS_EOL = "\r\n"
 UNIX_EOL    = "\n"
-MAC_EOL     = "\n"
+MAC_EOL     = "\r"
 
 api.env.job_queue = []
 api.env.system_packages = defaultdict(list)
@@ -251,15 +251,15 @@ def text_ensure_line(text, *lines):
     that are not already in the text at the end of it."""
     eol = text_detect_eol(text)
     res = list(text.split(eol))
-    for line in lines:
-        assert line.find(eol) == -1, "No EOL allowed in lines parameter: " + repr(line)
+    for ensure_line in lines:
+        assert ensure_line.find(eol) == -1, "No EOL allowed in lines parameter: " + repr(ensure_line)
         found = False
-        for l in res:
-            if l == res:
+        for line in res:
+            if line == ensure_line:
                 found = True
                 break
         if not found:
-            res.append(line)
+            res.append(ensure_line)
     return eol.join(res)
 
 
