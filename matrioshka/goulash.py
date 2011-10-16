@@ -129,14 +129,14 @@ def after(name):
 def only_for(*roles):
     """Decorates a function to only run for the specified roles.
     """
-    roles = set()
+    for_roles = set()
     for role in roles:
-        roles.update(role.split())
+        for_roles.update(role.split())
 
     def only_decorate(func):
         @functools.wraps(func)
         def run_if_in_role(*args, **kwargs):
-            if api.env.role_string in roles:
+            if api.env.role_string in for_roles:
                 return func(*args, **kwargs)
 
         return run_if_in_role
