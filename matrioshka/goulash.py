@@ -292,7 +292,7 @@ def local_read(location):
 
 def file_read(location):
     """Reads the *remote* file at the given location."""
-    return run("cat '%s'" % (location))
+    return '\n'.join(run("cat '%s'" % (location)).split('\r\n'))
 
 
 def file_exists(location):
