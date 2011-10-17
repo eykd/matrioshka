@@ -738,9 +738,13 @@ def deploy(**kwargs):
                 for p in api.env.after[api.env.role_string]:
                     p()
 
-                apply_firewall()
-
                 run_queued()
+
+    for role in api.env.roles:
+        api.env.role_string = role
+        for host in api.env.roledefs[api.env.role_string]:
+            with api.settings(host_string=host):
+                apply_firewall()
 
     for stop in api.env.on_stop:
         stop()
@@ -787,5 +791,7 @@ def apply_firewall():
                 sudo(command[1:])
             else:
                 sudo('ufw %s' % command)
+
         if firewalls:
+            sudo('yes|sudo ufw enable')
             sudo('ufw reload')
