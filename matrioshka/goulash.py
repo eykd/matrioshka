@@ -784,7 +784,7 @@ def install_python_packages():
 def apply_firewall():
     """Apply firewall rules.
     """
-    if command_check('ufw'):
+    if api.env.firewalls and command_check('ufw'):
         firewalls = api.env.firewalls[api.env.role_string]
         for command in firewalls:
             if command.startswith('$'):
