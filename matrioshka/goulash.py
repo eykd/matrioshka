@@ -761,7 +761,8 @@ def deploy(**kwargs):
 def install_system_packages():
     """Install system packages.
     """
-    if getattr(api.env, 'update_system', True):
+    update_by_default = api.env.get('update_system', True)
+    if api.env.setdefault('roles_update_system', defaultdict(lambda: update_by_default))[api.env.role_string]:
         package_update()
     packages = api.env.system_packages.get(api.env.role_string, ())
     for package in packages:
