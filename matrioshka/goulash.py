@@ -686,12 +686,7 @@ def knock(host, *ports):
         time.sleep(1)
     
 
-### Main Deploy task
-@api.task
-@notifies
-def deploy(**kwargs):
-    """Deploy the specified roles.
-    """
+def setup_roles(**kwargs):
     if kwargs:
         for role, host in kwargs.iteritems():
             api.env.roledefs[role] = [host]
@@ -702,6 +697,15 @@ def deploy(**kwargs):
 
     # Move 'all' to the front of the list.
     api.env.roles.sort(lambda a, b: -1 if a == 'all' else cmp(a, b))
+
+
+### Main Deploy task
+@api.task
+@notifies
+def deploy(**kwargs):
+    """Deploy the specified roles.
+    """
+    setup_roles(**kwargs)
     notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
 
     for start in api.env.on_start:
@@ -757,7 +761,8 @@ def deploy(**kwargs):
 def install_system_packages():
     """Install system packages.
     """
-    package_update()
+    if getattr(api.env, 'update_system', True):
+        package_update()
     packages = api.env.system_packages.get(api.env.role_string, ())
     for package in packages:
         for p in api.env.before[package]:
