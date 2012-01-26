@@ -677,20 +677,6 @@ def enable_munin_plugin(plugin):
     mode_user()
 
 
-@api.task
-def knock(host, *ports):
-    """Knock on servers to open up ssh.
-    """
-    for port in ports:
-        #create an INET, STREAMing socket
-        print "Knocking on", host, port
-        try:
-            s = socket.socket(proto=socket.SOL_TCP)
-            s.settimeout(1)
-            s.connect((host, int(port)))
-        except socket.timeout:
-            print "Knock..."
-        time.sleep(1)
 # DB management
 def create_psql_user(db_user, db_user_password):
     with api.settings(warn_only=True):
@@ -707,6 +693,23 @@ def create_psql_db(db, owner='postgres'):
     with api.settings(warn_only=True):
         sudo('psql -c "CREATE DATABASE %s WITH OWNER %s"' % (
             db, owner), user='postgres')
+
+
+# Port knocking
+# @api.task
+# def knock(host, *ports):
+#     """Knock on servers to open up ssh.
+#     """
+#     for port in ports:
+#         #create an INET, STREAMing socket
+#         print "Knocking on", host, port
+#         try:
+#             s = socket.socket(proto=socket.SOL_TCP)
+#             s.settimeout(1)
+#             s.connect((host, int(port)))
+#         except socket.timeout:
+#             print "Knock..."
+#         time.sleep(1)
     
 
 def setup_roles(**kwargs):
