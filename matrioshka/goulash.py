@@ -821,7 +821,7 @@ def install_system_packages():
 def install_python_packages():
     """Install systemwide python packages.
     """
-    update_by_default = api.env.get('upgrade_python', True)
+    update_by_default = api.env.get('upgrade_python', False)
     packages = ' '.join(api.env.python_packages.get(api.env.role_string, ()))
     find_links = api.env.get('pip_find_links', None)
     if find_links:
