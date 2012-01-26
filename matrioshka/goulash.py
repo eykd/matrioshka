@@ -646,18 +646,6 @@ def notifies(sticky=False):
         return decorator
 
 
-### Job queue managers
-def enqueue(priority, func, *args, **kwargs):
-    api.env.job_queue.append((priority, func, args, kwargs))
-
-
-def run_queued():
-    api.env.job_queue.sort()
-    for priority, func, args, kwargs in api.env.job_queue:
-        func(*args, **dict(kwargs))
-    api.env.job_queue[:] = ()
-
-
 def enable_nginx_site(site, source):
     mode_sudo()
     file_write('/etc/nginx/sites-available/%s' % site, path(source).text(),
@@ -712,6 +700,19 @@ def create_psql_db(db, owner='postgres'):
 #         time.sleep(1)
     
 
+### Job queue managers
+def enqueue(priority, func, *args, **kwargs):
+    api.env.job_queue.append((priority, func, args, kwargs))
+
+
+def run_queued():
+    api.env.job_queue.sort()
+    for priority, func, args, kwargs in api.env.job_queue:
+        func(*args, **dict(kwargs))
+    api.env.job_queue[:] = ()
+
+
+# Role management
 def setup_roles(**kwargs):
     if kwargs:
         for role, host in kwargs.iteritems():
