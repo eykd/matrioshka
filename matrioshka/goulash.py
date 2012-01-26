@@ -40,6 +40,7 @@
     :copyright: (c) 2011 by Sebastien Pierre, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
+import logging
 import os
 import base64
 import bz2
@@ -61,6 +62,8 @@ from fabric import context_managers
 
 from paver.easy import path
 
+logger = logging.getLogger('matrioshka')
+
 VERSION     = "0.0.4"
 MODE        = "user"
 RE_SPACES   = re.compile("[\s\t]+")
@@ -72,6 +75,7 @@ api.env.job_queue = []
 api.env.system_packages = defaultdict(list)
 api.env.python_packages = defaultdict(list)
 api.env.firewalls = defaultdict(list)
+api.env.role_secrets = {}
 
 # Pre-deployment
 api.env.on_start = []
@@ -198,7 +202,7 @@ def multiargs(function):
             return function()
         arg = args[0]
         args = args[1:]
-        if type(arg) in (tuple, list):
+        if type(arg) in (tuple, list, set):
             return map(lambda _: function(_, *args, **kwargs), arg)
         else:
             return function(arg, *args, **kwargs)
@@ -739,10 +743,10 @@ def deploy(**kwargs):
         start()
 
     for role in api.env.roles:
-        print "###########################################"
-        print "##### Role:", role
-        print "###########################################"
-        print "###########################################"
+        logger.info("###########################################")
+        logger.info("##### Role: %s", role)
+        logger.info("###########################################")
+        logger.info("###########################################")
         api.env.role_string = role
 
         notify('Deploying to role %s' % role, sticky=False)
@@ -753,8 +757,8 @@ def deploy(**kwargs):
             ##     ))
             notify('Deploying to %s as role %s' % (host, role), sticky=False)
 
-            if host in api.env.knocks:
-                knock(host, *api.env.knocks[host])
+            # if host in api.env.knocks:
+            #     knock(host, *api.env.knocks[host])
 
             with api.settings(host_string=host):
                 for p in api.env.prepare[api.env.role_string]:
