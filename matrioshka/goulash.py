@@ -263,6 +263,11 @@ def text_ensure_line(text, *lines):
     return eol.join(res)
 
 
+def file_ensure_line(filename, *lines):
+    if file_exists(filename):
+        file_update(filename, lambda _: text_ensure_line(_, *lines))
+
+
 def text_strip_margin(text, margin="|"):
     res = []
     eol = text_detect_eol(text)
