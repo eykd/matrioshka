@@ -609,11 +609,13 @@ def notify(msg, sticky=False):
     """Send a notification.
     """
     with context_managers.settings(warn_only=True):
-        api.local("%(notifier)s %(stickyflag)s %(messageflag)s '%(message)s'" % dict(
-            notifier = api.env.get('notifier', 'growlnotify'), 
-            stickyflag = api.env.get('stickyflag', '-s') if sticky else '', 
-            messageflag = api.env.get('messageflag', '-m'), 
-            message = msg.replace("'", r"'\''")))
+        logger.info(msg)
+        with api.hide('running', 'stdout', 'warnings'):
+            api.local("%(notifier)s %(stickyflag)s %(messageflag)s '%(message)s'" % dict(
+                notifier = api.env.get('notifier', 'growlnotify'),
+                stickyflag = api.env.get('stickyflag', '-s') if sticky else '',
+                messageflag = api.env.get('messageflag', '-m'),
+                message = msg.replace("'", r"'\''")))
 
 
 def notifies(sticky=False):
