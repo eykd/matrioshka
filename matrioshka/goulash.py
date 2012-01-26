@@ -691,6 +691,22 @@ def knock(host, *ports):
         except socket.timeout:
             print "Knock..."
         time.sleep(1)
+# DB management
+def create_psql_user(db_user, db_user_password):
+    with api.settings(warn_only=True):
+        with api.hide('running', 'stdout', 'warnings'):
+            with api.hide('running', ):
+                result = sudo('''psql -c "CREATE USER %s WITH NOCREATEDB NOCREATEUSER ENCRYPTED PASSWORD E'%s'"''' % (
+                    db_user, db_user_password), user='postgres')
+                if 'already exists' in result:
+                    sudo('''psql -c "ALTER ROLE %s ENCRYPTED PASSWORD E'%s'"''' % (
+                        db_user, db_user_password), user='postgres')
+
+
+def create_psql_db(db, owner='postgres'):
+    with api.settings(warn_only=True):
+        sudo('psql -c "CREATE DATABASE %s WITH OWNER %s"' % (
+            db, owner), user='postgres')
     
 
 def setup_roles(**kwargs):
