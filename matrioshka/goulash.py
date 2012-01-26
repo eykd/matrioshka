@@ -379,7 +379,8 @@ def package_update(package=None):
     if package == None:
         sudo("apt-get --yes update")
     else:
-        if type(package) in (list, tuple): package = " ".join(package)
+        if not isinstance(package, basestring):
+            package = " ".join(package)
         sudo("apt-get --yes upgrade " + package)
 
 
@@ -387,7 +388,8 @@ def package_install(package, update=False):
     """Installs the given package/list of package, optionnaly updating the package
     database."""
     if update: sudo("apt-get --yes update")
-    if type(package) in (list, tuple): package = " ".join(package)
+    if not isinstance(package, basestring):
+        package = " ".join(package)
     sudo("apt-get --yes install %s" % (package))
 
 
