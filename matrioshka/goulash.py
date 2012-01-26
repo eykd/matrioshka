@@ -77,6 +77,9 @@ api.env.python_packages = defaultdict(list)
 api.env.firewalls = defaultdict(list)
 api.env.role_secrets = {}
 
+# True if `sudo -u` needs a prepending sudo.
+api.env.sudo_sudo_u = True
+
 # Pre-deployment
 api.env.on_start = []
 # Post-deployment
@@ -767,15 +770,18 @@ def deploy(**kwargs):
                 for p in api.env.prepare[api.env.role_string]:
                     p()
                     
+                logger.info('Running before-%s tasks', api.env.role_string)
                 for p in api.env.before[api.env.role_string]:
                     p()
 
                 install_system_packages()
                 install_python_packages()
 
+                logger.info('Running after-%s tasks', api.env.role_string)
                 for p in api.env.after[api.env.role_string]:
                     p()
 
+                logger.info('Running queued tasks.')
                 run_queued()
 
     for role in api.env.roles:
