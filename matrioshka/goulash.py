@@ -831,9 +831,7 @@ def install_python_packages():
             packages = ' --upgrade ' + packages
         if find_links:
             packages = find_links + packages
-        logger.info('Installing python packages...')
         sudo('pip install %s' % packages)
-        logger.info('Installed python packages...')
     else:
         logger.info('No python packages to install!')
 
