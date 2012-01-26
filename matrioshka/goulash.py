@@ -609,7 +609,8 @@ def notify(msg, sticky=False):
     """Send a notification.
     """
     with context_managers.settings(warn_only=True):
-        logger.info(msg)
+        for line in msg.splitlines():
+            logger.info(line)
         with api.hide('running', 'stdout', 'warnings'):
             api.local("%(notifier)s %(stickyflag)s %(messageflag)s '%(message)s'" % dict(
                 notifier = api.env.get('notifier', 'growlnotify'),
@@ -824,7 +825,11 @@ def install_python_packages():
             packages = ' --upgrade ' + packages
         if find_links:
             packages = find_links + packages
+        logger.info('Installing python packages...')
         sudo('pip install %s' % packages)
+        logger.info('Installed python packages...')
+    else:
+        logger.info('No python packages to install!')
 
 
 @notifies
