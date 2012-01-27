@@ -53,6 +53,7 @@ import functools
 import datetime
 import socket
 import time
+import contextlib
 
 from collections import defaultdict
 
@@ -92,6 +93,8 @@ api.env.before = defaultdict(list)
 # Post-package/role constructors
 api.env.after = defaultdict(list)
 
+api.env.with_tags = set(['all'])
+api.env.not_tags = set()
 api.env.knocks = {}
 
 
@@ -179,6 +182,20 @@ class mode_sudo(object):
         global MODE
         MODE = self._old_mode
 
+
+# Tags
+@contextlib.contextmanager
+def tag(*names):
+    tags = set(names)
+    if ('all' in api.env.with_tags and not tags.intersection(api.env.not_tags)) \
+           or (tags.intersection(api.env.with_tags) and not tags.intersection(api.env.not_tags)):
+        yield
+    else:
+        logger.warning('Not executing the following commands (tagged with %s):', ', '.join(tags))
+        with api.prefix('#'):
+            yield
+        logger.warning('Resuming normal command execution.')
+        
         
 ### Enhancements to fabri.api 
 def run(*args, **kwargs):
