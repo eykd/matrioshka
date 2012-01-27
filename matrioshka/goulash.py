@@ -380,6 +380,18 @@ def dir_ensure(location, recursive=False, mode=None, owner=None, group=None):
         dir_attribs(location, owner=owner, group=group)
 
 
+def link_ensure(link, target, mode=None, owner=None, group=None):
+    """Ensures that there is a remote symbolic link at the given location, pointing to the given target.
+
+    Optionally update the mode/owner/group.
+    """
+    v = {'link': link, 'target': target}
+    if 'OK' not in run("[[ -L '%(link)s' && `readlink '%(link)s'` = '%(target)s' ]] && echo OK ; true" % v):
+        run("rm -f %(link)s && ln -s '%(target)s' '%(link)s'" % v)
+    if mode or owner or group:
+        file_attribs(link, mode=mode, owner=owner, group=group)
+
+
 def command_check(command):
     """Tests if the given command is available on the system."""
     return run("which '%s' >& /dev/null && echo OK ; true" % command).endswith("OK")
