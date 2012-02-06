@@ -183,25 +183,46 @@ class mode_sudo(object):
         MODE = self._old_mode
 
 
+class mode_suppress(object):
+    def __init__(self):
+        global MODE
+        self._old_mode = MODE
+        MODE = "suppress"
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args, **kws):
+        global MODE
+        MODE = self._old_mode
+
+
 # Tags
 @contextlib.contextmanager
 def tag(*names):
     tags = set(names)
     if ('all' in api.env.with_tags and not tags.intersection(api.env.not_tags)) \
            or (tags.intersection(api.env.with_tags) and not tags.intersection(api.env.not_tags)):
+        logger.info('-------> BEGINNING of tagged section: %s', ', '.join(tags))
         yield
+        logger.info('<------- END of tagged section: %s', ', '.join(tags))
     else:
-        logger.warning('Not executing the following commands (tagged with %s):', ', '.join(tags))
-        with api.prefix('#'):
-            yield
-        logger.warning('Resuming normal command execution.')
+        logger.warning('-------> NOT executing tagged section: %s):', ', '.join(tags))
+        with mode_suppress():
+            try:
+                yield
+            except (AssertionError, TypeError):
+                pass
+        logger.warning('<------- RESUMING normal command execution.')
         
         
 ### Enhancements to fabri.api 
 def run(*args, **kwargs):
     """A wrapper to Fabric's run/sudo commands, using the 'goulash.MODE' global
     to tell wether the command should be run as regular user or sudo."""
-    if MODE == "sudo":
+    if MODE == "suppress":
+        return ""
+    elif MODE == "sudo":
         return api.sudo(*args, **kwargs)
     else:
         return api.run(*args, **kwargs)
@@ -210,7 +231,10 @@ def run(*args, **kwargs):
 def sudo(*args, **kwargs):
     """A wrapper to Fabric's run/sudo commands, using the 'goulash.MODE' global
     to tell wether the command should be run as regular user or sudo."""
-    return api.sudo(*args, **kwargs)
+    if MODE == "suppress":
+        return ""
+    else:
+        return api.sudo(*args, **kwargs)
 
 
 ### Helpers and decorators
@@ -686,22 +710,20 @@ def notifies(sticky=False):
 
 
 def enable_nginx_site(site, source):
-    mode_sudo()
-    file_write('/etc/nginx/sites-available/%s' % site, path(source).text(),
-               mode=644, owner='root', group='root')
-    if file_exists('/etc/nginx/sites-enabled/%s' % site):
-        sudo('rm /etc/nginx/sites-enabled/%s' % site)
-    sudo('ln -s /etc/nginx/sites-available/%(site)s /etc/nginx/sites-enabled/%(site)s' % {'site': site})
-    mode_user()
+    with mode_sudo():
+        file_write('/etc/nginx/sites-available/%s' % site, path(source).text(),
+                   mode=644, owner='root', group='root')
+        if file_exists('/etc/nginx/sites-enabled/%s' % site):
+            sudo('rm /etc/nginx/sites-enabled/%s' % site)
+        sudo('ln -s /etc/nginx/sites-available/%(site)s /etc/nginx/sites-enabled/%(site)s' % {'site': site})
     enqueue(100, sudo, '/etc/init.d/nginx reload')
 
 
 def enable_munin_plugin(plugin):
-    mode_sudo()
-    if file_exists('/etc/munin/plugins/%s' % plugin):
-        sudo('rm /etc/munin/plugins/%s' % plugin)
-    sudo('ln -s /usr/share/munin/plugins/%(plugin)s /etc/munin/plugins/%(plugin)s' % {'plugin': plugin})
-    mode_user()
+    with mode_sudo():
+        if file_exists('/etc/munin/plugins/%s' % plugin):
+            sudo('rm /etc/munin/plugins/%s' % plugin)
+        sudo('ln -s /usr/share/munin/plugins/%(plugin)s /etc/munin/plugins/%(plugin)s' % {'plugin': plugin})
 
 
 # DB management
@@ -803,8 +825,10 @@ def deploy(**kwargs):
                 for p in api.env.before[api.env.role_string]:
                     p()
 
-                install_system_packages()
-                install_python_packages()
+                with tag('system packages'):
+                    install_system_packages()
+                with tag('python packages'):
+                    install_python_packages()
 
                 logger.info('Running after-%s tasks', api.env.role_string)
                 for p in api.env.after[api.env.role_string]:
@@ -817,7 +841,8 @@ def deploy(**kwargs):
         api.env.role_string = role
         for host in api.env.roledefs[api.env.role_string]:
             with api.settings(host_string=host):
-                apply_firewall()
+                with tag('firewall'):
+                    apply_firewall()
 
     for stop in api.env.on_stop:
         stop()
