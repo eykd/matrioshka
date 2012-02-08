@@ -825,9 +825,9 @@ def deploy(**kwargs):
                 for p in api.env.before[api.env.role_string]:
                     p()
 
-                with tag('system packages'):
+                with tag('system', 'packages'):
                     install_system_packages()
-                with tag('python packages'):
+                with tag('python', 'packages'):
                     install_python_packages()
 
                 logger.info('Running after-%s tasks', api.env.role_string)
