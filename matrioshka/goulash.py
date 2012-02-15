@@ -719,11 +719,13 @@ def enable_nginx_site(site, source):
     enqueue(100, sudo, '/etc/init.d/nginx reload')
 
 
-def enable_munin_plugin(plugin):
+def enable_munin_plugin(plugin, link_name=None):
+    if link_name is None:
+        link_name = plugin
     with mode_sudo():
         if file_exists('/etc/munin/plugins/%s' % plugin):
             sudo('rm /etc/munin/plugins/%s' % plugin)
-        sudo('ln -s /usr/share/munin/plugins/%(plugin)s /etc/munin/plugins/%(plugin)s' % {'plugin': plugin})
+        sudo('ln -s /usr/share/munin/plugins/%(plugin)s /etc/munin/plugins/%(link_name)s' % locals())
 
 
 # DB management
