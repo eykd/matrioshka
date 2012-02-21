@@ -154,6 +154,24 @@ def only_for(*roles):
     return only_decorate
 
 
+def only_on(*roles):
+    """Decorates a function to only run on the specified hosts.
+    """
+    for_roles = set()
+    for role in roles:
+        for_roles.update(role.split())
+
+    def only_decorate(func):
+        @functools.wraps(func)
+        def run_if_in_role(*args, **kwargs):
+            if api.env.role_string in for_roles:
+                return func(*args, **kwargs)
+
+        return run_if_in_role
+
+    return only_decorate
+
+
 ### Usermode helpers
 class mode_user(object):
     def __init__(self):
@@ -715,7 +733,7 @@ def enable_nginx_site(site, source):
                    mode=644, owner='root', group='root')
         if file_exists('/etc/nginx/sites-enabled/%s' % site):
             sudo('rm /etc/nginx/sites-enabled/%s' % site)
-        sudo('ln -s /etc/nginx/sites-available/%(site)s /etc/nginx/sites-enabled/%(site)s' % {'site': site})
+        link_ensure('/etc/nginx/sites-enabled/' + site, '/etc/nginx/sites-available/' + site)
     enqueue(100, sudo, '/etc/init.d/nginx reload')
 
 
@@ -725,7 +743,7 @@ def enable_munin_plugin(plugin, link_name=None):
     with mode_sudo():
         if file_exists('/etc/munin/plugins/%s' % plugin):
             sudo('rm /etc/munin/plugins/%s' % plugin)
-        sudo('ln -s /usr/share/munin/plugins/%(plugin)s /etc/munin/plugins/%(link_name)s' % locals())
+        link_ensure('/etc/munin/plugins/' + link_name, '/usr/share/munin/plugins/' + plugin)
 
 
 # DB management
@@ -865,8 +883,11 @@ def install_system_packages():
         for p in api.env.before[package]:
             p()
 
+    # In case the before events added dependencies:
+    install_packages = api.env.system_packages.get(api.env.role_string, ())
+    
     if packages:
-        package_install(packages)
+        package_install(install_packages)
 
     for package in packages:
         for p in api.env.after[package]:
