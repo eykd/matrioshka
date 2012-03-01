@@ -659,11 +659,11 @@ def service_ensure(name, restart=False):
             sudo("service %s start" % name)
 
 
-def file_copy(target_on_server, local_path,
+def file_copy(source, target,
               mode_target=None, mode=None, owner=None, group=None):
-    sudo('cp %s %s' % (local_path, target_on_server))
+    sudo('cp %s %s' % (source, target))
     with mode_sudo():
-        file_attribs(target_on_server if mode_target is None else mode_target,
+        file_attribs(target if mode_target is None else mode_target,
                      mode=mode, owner=owner, group=group)
 
 
