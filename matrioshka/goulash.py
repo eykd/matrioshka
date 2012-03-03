@@ -746,6 +746,12 @@ def enable_munin_plugin(plugin, link_name=None):
         link_ensure('/etc/munin/plugins/' + link_name, '/usr/share/munin/plugins/' + plugin)
 
 
+def enable_logrotation(name, conf):
+    with mode_sudo():
+        file_write('/etc/logrotate.d/%s' % name, conf
+                   mode=644, owner='root', group='root')
+
+
 # DB management
 def create_psql_user(db_user, db_user_password):
     with api.settings(warn_only=True):
