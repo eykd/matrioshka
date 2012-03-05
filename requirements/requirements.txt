@@ -1,4 +1,3 @@
---find-links=http://pypi.crossway.org/matrioshka/index.html
 distribute
 virtualenv
 Paver
@@ -8,5 +7,5 @@ paramiko
 pycrypto
 Fabric
 boto
+path.py
 
--r setup.txt
