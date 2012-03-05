@@ -61,7 +61,7 @@ import fabric
 from fabric import api
 from fabric import context_managers
 
-from paver.easy import path
+from path import path
 
 logger = logging.getLogger('matrioshka')
 
