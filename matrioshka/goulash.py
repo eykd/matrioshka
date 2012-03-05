@@ -835,14 +835,16 @@ def deploy(**kwargs):
         notify('Deploying to role %s' % role, sticky=False)
 
         for host in api.env.roledefs[api.env.role_string]:
-            ## local('paver knock -t {host} -p {knocks}'.format(
-            ##     host = host, knocks = ','.join(site['KNOCKS']['ssh'])
-            ##     ))
             notify('Deploying to %s as role %s' % (host, role), sticky=False)
 
-            # if host in api.env.knocks:
-            #     knock(host, *api.env.knocks[host])
+            logger.info('Running before-all tasks')
+            for p in api.env.before['all']:
+                p()
 
+            logger.info('Running before-%s tasks', host)
+            for p in api.env.before[host]:
+                p()
+                
             with api.settings(host_string=host):
                 for p in api.env.prepare[api.env.role_string]:
                     p()
@@ -862,6 +864,14 @@ def deploy(**kwargs):
 
                 logger.info('Running queued tasks.')
                 run_queued()
+
+            logger.info('Running after-%s tasks', host)
+            for p in api.env.after[host]:
+                p()
+                
+            logger.info('Running after-all tasks')
+            for p in api.env.after['all']:
+                p()
 
     for role in api.env.roles:
         api.env.role_string = role
