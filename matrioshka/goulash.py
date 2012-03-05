@@ -746,9 +746,9 @@ def enable_munin_plugin(plugin, link_name=None):
         link_ensure('/etc/munin/plugins/' + link_name, '/usr/share/munin/plugins/' + plugin)
 
 
-def enable_logrotation(name, conf):
+def enable_logrotation(name, source):
     with mode_sudo():
-        file_write('/etc/logrotate.d/%s' % name, conf
+        file_write('/etc/logrotate.d/%s' % name, path(source).text(),
                    mode=644, owner='root', group='root')
 
 
