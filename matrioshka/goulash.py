@@ -670,28 +670,89 @@ def ssh_authorize(user, key):
         file_write(keyf, key, owner=user, group=user)
 
 
-def upstart_ensure(name, restart=False):
+def upstart_ensure(name, restart=False, kwargs=None):
     """Ensures that the given upstart service is running, restarting it if necessary"""
-    if sudo("status "+ name).find("/running") >= 0:
+    if upstart_status(name, kwargs).find("/running") >= 0:
         if restart:
             if not isinstance(restart, basestring):
                 restart = 'restart'
-            sudo("%s %s" % (restart, name))
+            upstart_(name, restart, kwargs)
     else:
-        sudo("start " + name)
+        upstart_start(name, kwargs)
+
+
+def upstart_(name, command, kwargs=None):
+    if kwargs is None:
+        kwargs = {}
+    return sudo("%s %s %s" % (command, name, ' '.join('%s=%s' % (k, v)
+                                                      for k, v in kwargs.items())))
+
+
+def upstart_start(name, kwargs=None):
+    """Start the named upstart service.
+    """
+    return upstart_(name, 'start', kwargs)
+
+
+def upstart_stop(name, kwargs=None):
+    """Stop the named upstart service.
+    """
+    return upstart_(name, 'stop', kwargs)
+
+
+def upstart_status(name, kwargs=None):
+    """Return the status of the named upstart service.
+    """
+    return upstart_(name, 'status', kwargs)
+
+
+def upstart_restart(name, kwargs=None):
+    """Restart the named upstart service.
+    """
+    return upstart_(name, 'restart', kwargs)
+
+
+def upstart_reload(name, kwargs=None):
+    """Reload the named upstart service.
+    """
+    return upstart_(name, 'reload', kwargs)
+
+
+def upstart_emit(event, kwargs=None):
+    """Emit the given upstart event.
+    """
+    return upstart_(event, 'emit', kwargs)
 
 
 def service_ensure(name, restart=False):
     """Ensures that the given init.d service is running, restarting it if necessary
     """
     with api.settings(warn_only = True):
-        if sudo("service %s status" % name, combine_stderr=True).find("running") >= 0:
+        if service_(name, 'status').find('running') >= 0:
             if restart:
                 if not isinstance(restart, basestring):
                     restart = 'restart'
-                sudo("service %s %s" % (name, restart))
+                return service_(name, restart)
         else:
-            sudo("service %s start" % name)
+            return service_start(name)
+
+
+def service_(name, command):
+    """Pass the given command to the named init.d service.
+    """
+    return sudo("service %s %s" % (name, command), combine_stderr=True)
+
+
+def service_stop(name):
+    """Stop the named init.d service.
+    """
+    return service_(name, 'stop')
+
+
+def service_start(name):
+    """Start the named init.d service.
+    """
+    return service_(name, 'start')
 
 
 def file_copy(source, target,
