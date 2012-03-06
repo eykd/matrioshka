@@ -556,7 +556,7 @@ def user_check(name):
         return None
 
 
-def user_ensure(name, passwd=None, home=None, uid=None, gid=None, shell=None):
+def user_ensure(name, passwd=None, home=None, uid=None, gid=None, shell=None, dirs=(), files=()):
     """Ensures that the given users exists, optionally updating their passwd/home/uid/gid/shell."""
     d = user_check(name)
     if not d:
@@ -585,6 +585,13 @@ def user_ensure(name, passwd=None, home=None, uid=None, gid=None, shell=None):
             options.append("-s '%s'" % (shell))
         if options:
             sudo("usermod %s '%s'" % (" ".join(options), name))
+    for record in dirs:
+        dir_ensure(record['location'], owner=name, group=record.get('group', name), mode=record.get('mode'))
+    for record in files:
+        file_write(record['location'], record['source'],
+                   owner=name,
+                   group=record.get('group', name),
+                   mode=record.get('mode'))
 
 
 def group_create(name, gid=None):
