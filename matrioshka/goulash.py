@@ -439,6 +439,34 @@ def dir_ensure(location, recursive=False, mode=None, owner=None, group=None):
         dir_attribs(location, owner=owner, group=group)
 
 
+def git_config(user, email, name):
+    sudo('git config user.email "%s"' % email, user=user)
+    sudo('git config user.name "%s"' % name, user=user)
+
+
+def git_ensure_repo(location, remote, commit_id, as_user, force=False, update_submodules=False):
+    dir_ensure(location, owner=as_user)
+    with api.cd(location):
+        with tag('git', 'checkout'):
+            if not dir_exists('%s/.git' % location):
+                sudo('git init', user=as_user)
+
+            if 'origin' in sudo('git remote', user=as_user):
+                if remote not in sudo('git remote show origin'):
+                    sudo('git remote rm origin')
+                    sudo('git remote add origin %s' % remote, user=as_user)
+            else:
+                sudo('git remote add origin %s' % remote, user=as_user)
+            
+            if force:
+                sudo('git stash && git stash clear', user=as_user)
+
+            sudo('git fetch', user='apocalypse')
+            sudo('git checkout %s' % commit_id, user=as_user)
+            if update_submodules:
+                sudo('git submodule update --init', user=as_user)
+
+
 def link_ensure(link, target, mode=None, owner=None, group=None):
     """Ensures that there is a remote symbolic link at the given location, pointing to the given target.
 
