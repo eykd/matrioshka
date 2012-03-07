@@ -961,41 +961,17 @@ def deploy(**kwargs):
         for host in api.env.roledefs[api.env.role_string]:
             notify('Deploying to %s as role %s' % (host, role), sticky=False)
 
-            logger.info('Running before-all tasks')
-            for p in api.env.before['all']:
-                p()
+            with emit_events('all'):
+                with emit_events(host):
+                    with api.settings(host_string=host):
+                        with emit_events(api.env.role_string):
+                            with tag('system', 'packages'):
+                                install_system_packages()
+                            with tag('python', 'packages'):
+                                install_python_packages()
 
-            logger.info('Running before-%s tasks', host)
-            for p in api.env.before[host]:
-                p()
-                
-            with api.settings(host_string=host):
-                for p in api.env.prepare[api.env.role_string]:
-                    p()
-                    
-                logger.info('Running before-%s tasks', api.env.role_string)
-                for p in api.env.before[api.env.role_string]:
-                    p()
-
-                with tag('system', 'packages'):
-                    install_system_packages()
-                with tag('python', 'packages'):
-                    install_python_packages()
-
-                logger.info('Running after-%s tasks', api.env.role_string)
-                for p in api.env.after[api.env.role_string]:
-                    p()
-
-                logger.info('Running queued tasks.')
-                run_queued()
-
-            logger.info('Running after-%s tasks', host)
-            for p in api.env.after[host]:
-                p()
-                
-            logger.info('Running after-all tasks')
-            for p in api.env.after['all']:
-                p()
+                            logger.info('Running queued tasks.')
+                            run_queued()
 
     for role in api.env.roles:
         api.env.role_string = role
@@ -1019,19 +995,13 @@ def install_system_packages():
     if api.env.setdefault('roles_update_system', defaultdict(lambda: update_by_default))[api.env.role_string]:
         package_update()
     packages = api.env.system_packages.get(api.env.role_string, ())
-    for package in packages:
-        for p in api.env.before[package]:
-            p()
 
-    # In case the before events added dependencies:
-    install_packages = api.env.system_packages.get(api.env.role_string, ())
-    
-    if packages:
-        package_install(install_packages)
+    with emit_events(*packages):
+        # In case the before events added dependencies:
+        install_packages = api.env.system_packages.get(api.env.role_string, ())
 
-    for package in packages:
-        for p in api.env.after[package]:
-            p()
+        if install_packages:
+            package_install(install_packages)
 
 
 @notifies
