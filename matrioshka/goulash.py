@@ -98,7 +98,35 @@ api.env.not_tags = set()
 api.env.knocks = {}
 
 
-### Env, Pre, Post decorators.
+### Events
+@contextlib.contextmanager
+def emit_events(*events):
+    """Context manager to run before and after tasks for specified events.
+    """
+    before_events(*events)
+    yield
+    after_events(*events)
+
+
+def before_events(*events):
+    """Run before tasks for specified events.
+    """
+    for event in events:
+        logger.info('Running before-%s tasks' % event)
+        for p in api.env.before[event]:
+            p()
+
+
+def after_events(*events):
+    """Run after tasks for specified events.
+    """
+    for event in events:
+        logger.info('Running: after-%s tasks' % event)
+        for p in api.env.after[event]:
+            p()
+
+
+### Env, Pre, Post event decorators.
 def on_start(func):
     api.env.on_start.append(func)
     return func
