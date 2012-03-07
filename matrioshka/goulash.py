@@ -716,36 +716,42 @@ def upstart_(name, command, kwargs=None):
                                                       for k, v in kwargs.items())))
 
 
+@api.task
 def upstart_start(name, kwargs=None):
     """Start the named upstart service.
     """
     return upstart_(name, 'start', kwargs)
 
 
+@api.task
 def upstart_stop(name, kwargs=None):
     """Stop the named upstart service.
     """
     return upstart_(name, 'stop', kwargs)
 
 
+@api.task
 def upstart_status(name, kwargs=None):
     """Return the status of the named upstart service.
     """
     return upstart_(name, 'status', kwargs)
 
 
+@api.task
 def upstart_restart(name, kwargs=None):
     """Restart the named upstart service.
     """
     return upstart_(name, 'restart', kwargs)
 
 
+@api.task
 def upstart_reload(name, kwargs=None):
     """Reload the named upstart service.
     """
     return upstart_(name, 'reload', kwargs)
 
 
+@api.task
 def upstart_emit(event, kwargs=None):
     """Emit the given upstart event.
     """
@@ -765,18 +771,21 @@ def service_ensure(name, restart=False):
             return service_start(name)
 
 
+@api.task
 def service_(name, command):
     """Pass the given command to the named init.d service.
     """
     return sudo("service %s %s" % (name, command), combine_stderr=True)
 
 
+@api.task
 def service_stop(name):
     """Stop the named init.d service.
     """
     return service_(name, 'stop')
 
 
+@api.task
 def service_start(name):
     """Start the named init.d service.
     """
