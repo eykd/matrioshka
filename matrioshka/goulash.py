@@ -1038,3 +1038,30 @@ def apply_firewall():
         if firewalls:
             sudo('yes|sudo ufw enable')
             sudo('ufw reload')
+
+
+@notifies
+@api.task
+def maintenance_on():
+    """Turn on maintenance mode.
+    """
+    before_events('maintenance')
+
+
+@notifies
+@api.task
+@after('maintenance')
+def maintenance_off():
+    """Turn off maintenance mode.
+    """
+    after_events('maintenance')
+
+
+@contextlib.contextmanager
+def maintenance():
+    """Context manager for entering and exiting maintenance mode for a block of code.
+    """
+    logger.info('Entering maintenance mode.')
+    with emit_events('maintenance'):
+        yield
+    logger.info('Leaving maintenance mode.')
