@@ -472,24 +472,30 @@ def git_config(user, email, name):
     sudo('git config user.name "%s"' % name, user=user)
 
 
-def git_ensure_repo(location, remote, commit_id, as_user, force=False, update_submodules=False):
-    dir_ensure(location, owner=as_user)
+def git_ensure_repo(location, remote, commit_id, as_user, as_user_email=None, as_user_name=None,
+                    force=False, update_submodules=False):
+    with mode_sudo():
+        dir_ensure(location, owner=as_user)
     with api.cd(location):
         with tag('git', 'checkout'):
             if not dir_exists('%s/.git' % location):
                 sudo('git init', user=as_user)
+            if as_user_email is not None:
+                git_config(as_user, as_user_email, as_user_name)
 
             if 'origin' in sudo('git remote', user=as_user):
-                if remote not in sudo('git remote show origin'):
-                    sudo('git remote rm origin')
+                if remote not in sudo('git remote show origin', user=as_user):
+                    sudo('git remote rm origin', user=as_user)
                     sudo('git remote add origin %s' % remote, user=as_user)
             else:
                 sudo('git remote add origin %s' % remote, user=as_user)
+
+            sudo('git fetch', user=as_user)
             
             if force:
-                sudo('git stash && git stash clear', user=as_user)
+                with api.settings(warn_only=True):
+                    sudo('git stash && git stash clear', user=as_user)
 
-            sudo('git fetch', user='apocalypse')
             sudo('git checkout %s' % commit_id, user=as_user)
             if update_submodules:
                 sudo('git submodule update --init', user=as_user)
