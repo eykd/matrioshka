@@ -976,17 +976,15 @@ def deploy(**kwargs):
         for host in api.env.roledefs[api.env.role_string]:
             notify('Deploying to %s as role %s' % (host, role), sticky=False)
 
-            with emit_events('all'):
-                with emit_events(host):
-                    with api.settings(host_string=host):
-                        with emit_events(api.env.role_string):
-                            with tag('system', 'packages'):
-                                install_system_packages()
-                            with tag('python', 'packages'):
-                                install_python_packages()
+            with api.settings(host_string=host):
+                with emit_events('all', host, api.env.target, api.env.role_string):
+                    with tag('system', 'packages'):
+                        install_system_packages()
+                    with tag('python', 'packages'):
+                        install_python_packages()
 
-                            logger.info('Running queued tasks.')
-                            run_queued()
+                    logger.info('Running queued tasks.')
+                    run_queued()
 
     for role in api.env.roles:
         api.env.role_string = role
