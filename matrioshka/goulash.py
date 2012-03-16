@@ -1023,6 +1023,7 @@ def install_python_packages():
     """
     update_by_default = api.env.get('upgrade_python', False)
     packages = ' '.join(api.env.python_packages.get(api.env.role_string, ()))
+    pip_options = api.env.get('pip_options', [])
     find_links = api.env.get('pip_find_links', None)
     if find_links:
         find_links = ' --find-links=' + find_links + ' '
@@ -1031,6 +1032,8 @@ def install_python_packages():
             packages = ' --upgrade ' + packages
         if find_links:
             packages = find_links + packages
+        if pip_options:
+            packages = '%s %s' % (' '.join(pip_options), packages)
         sudo('pip install %s' % packages)
     else:
         logger.info('No python packages to install!')
