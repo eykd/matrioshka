@@ -257,19 +257,19 @@ class mode_suppress(object):
 @contextlib.contextmanager
 def tag(*names):
     tags = set(names)
-    if ('all' in api.env.with_tags and not tags.intersection(api.env.not_tags)) \
-           or (tags.intersection(api.env.with_tags) and not tags.intersection(api.env.not_tags)):
+    if ('all' in api.env.with_tags or tags.intersection(api.env.with_tags)) \
+           and not tags.intersection(api.env.not_tags):
         logger.info('-------> BEGINNING of tagged section: %s', ', '.join(tags))
         yield
         logger.info('<------- END of tagged section: %s', ', '.join(tags))
     else:
-        logger.warning('-------> NOT executing tagged section: %s):', ', '.join(tags))
+        logger.warning('-------> NOT executing tagged section: (%s) does not intersect (%s):', ', '.join(tags), ', '.join(api.env.with_tags))
         with mode_suppress():
             try:
                 yield
             except (AssertionError, TypeError):
                 pass
-        logger.warning('<------- RESUMING normal command execution.')
+        # logger.warning('<------- RESUMING normal command execution.')
         
         
 ### Enhancements to fabri.api 
@@ -962,6 +962,42 @@ def setup_roles(**kwargs):
     api.env.roles.sort(lambda a, b: -1 if a == 'all' else cmp(a, b))
 
 
+def iterhosts(verb=''):
+    for role in api.env.roles:
+        logger.info("###########################################")
+        logger.info("##### %s Role: %s", verb, role)
+        logger.info("###########################################")
+        logger.info("###########################################")
+        notify('%s Role: %s' % (verb, role), sticky=False)
+        api.env.role_string = role
+        
+        for host in api.env.roledefs[api.env.role_string]:
+            notify('%s %s as role %s' % (verb, host, role), sticky=False)
+
+            with api.settings(host_string=host):
+                yield role, host
+
+
+def on_hosts(function):
+    def wrapper(*args, **kwargs):
+        if api.env.host_string:
+            function(*args)
+        else:
+            setup_roles(**kwargs)
+            for role, host in iterhosts(function.__doc__):
+                function(*args)
+    wrapper.__name__ = function.__name__
+    wrapper.__doc__ = function.__doc__
+    return wrapper
+
+    
+@api.task
+def call(name, *args, **kwargs):
+    print "Calling", name
+    from fabric.tasks import execute
+    execute(name, *args, **kwargs)
+
+
 ### Main Deploy task
 @api.task
 @notifies
@@ -974,34 +1010,19 @@ def deploy(**kwargs):
     for start in api.env.on_start:
         start()
 
-    for role in api.env.roles:
-        logger.info("###########################################")
-        logger.info("##### Role: %s", role)
-        logger.info("###########################################")
-        logger.info("###########################################")
-        api.env.role_string = role
+    for role, host in iterhosts('Deploying to'):
+        with emit_events('all', host, api.env.target, api.env.role_string):
+            with tag('system', 'packages'):
+                install_system_packages()
+            with tag('python', 'packages'):
+                install_python_packages()
 
-        notify('Deploying to role %s' % role, sticky=False)
+            logger.info('Running queued tasks.')
+        run_queued()
 
-        for host in api.env.roledefs[api.env.role_string]:
-            notify('Deploying to %s as role %s' % (host, role), sticky=False)
-
-            with api.settings(host_string=host):
-                with emit_events('all', host, api.env.target, api.env.role_string):
-                    with tag('system', 'packages'):
-                        install_system_packages()
-                    with tag('python', 'packages'):
-                        install_python_packages()
-
-                    logger.info('Running queued tasks.')
-                    run_queued()
-
-    for role in api.env.roles:
-        api.env.role_string = role
-        for host in api.env.roledefs[api.env.role_string]:
-            with api.settings(host_string=host):
-                with tag('firewall'):
-                    apply_firewall()
+    for role, host in iterhosts('Setting up firewall on'):
+        with tag('firewall'):
+            apply_firewall()
 
     for stop in api.env.on_stop:
         stop()
