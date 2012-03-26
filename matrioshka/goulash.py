@@ -204,29 +204,39 @@ def only_on(*roles):
 class mode_user(object):
     def __init__(self):
         global MODE
-        self._old_mode = MODE
-        MODE = "user"
+        if MODE == 'suppress':
+            self.suppressed = True
+        else:
+            self.suppressed = False
+            self._old_mode = MODE
+            MODE = "user"
 
     def __enter__(self):
         pass
 
     def __exit__(self, *args, **kws):
-        global MODE
-        MODE = self._old_mode
+        if not self.suppressed:
+            global MODE
+            MODE = self._old_mode
 
 
 class mode_sudo(object):
     def __init__(self):
         global MODE
-        self._old_mode = MODE
-        MODE = "sudo"
+        if MODE == 'suppress':
+            self.suppressed = True
+        else:
+            self.suppressed = False
+            self._old_mode = MODE
+            MODE = "sudo"
 
     def __enter__(self):
         pass
 
     def __exit__(self, *args, **kws):
-        global MODE
-        MODE = self._old_mode
+        if not self.suppressed:
+            global MODE
+            MODE = self._old_mode
 
 
 class mode_suppress(object):
