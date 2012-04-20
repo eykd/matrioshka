@@ -477,9 +477,9 @@ def dir_ensure(location, recursive=False, mode=None, owner=None, group=None):
         dir_attribs(location, owner=owner, group=group)
 
 
-def git_config(user, email, name, global=True):
-    sudo('git config --global user.email "%s"' % email, user=user)
-    sudo('git config --global user.name "%s"' % name, user=user)
+def git_config(user, email, name, global_config=True):
+    sudo('git config %suser.email "%s"' % ('--global ' if global_config else '', email), user=user)
+    sudo('git config %suser.name "%s"' % ('--global ' if global_config else '', name), user=user)
 
 
 def git_ensure_repo(location, remote, commit_id, as_user, as_user_email=None, as_user_name=None,
