@@ -991,13 +991,6 @@ def on_hosts(function):
     return wrapper
 
     
-@api.task
-def call(name, *args, **kwargs):
-    print "Calling", name
-    from fabric.tasks import execute
-    execute(name, *args, **kwargs)
-
-
 ### Main Deploy task
 @api.task
 @notifies
@@ -1097,7 +1090,6 @@ def maintenance_on():
 
 @notifies
 @api.task
-@after('maintenance')
 def maintenance_off():
     """Turn off maintenance mode.
     """
