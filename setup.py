@@ -10,6 +10,7 @@ setup(
         'Fabric',
         'boto',
         'Paved',
+        'path.py',
         ],
 
     zip_safe = False,
