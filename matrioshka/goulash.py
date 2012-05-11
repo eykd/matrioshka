@@ -545,7 +545,7 @@ def package_install(package, update=False):
     if update: sudo("apt-get --yes update")
     if not isinstance(package, basestring):
         package = " ".join(package)
-    sudo("apt-get --yes install %s" % (package))
+    sudo("DEBIAN_FRONTEND=readline apt-get --yes install %s" % (package))
 
 
 @multiargs
