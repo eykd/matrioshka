@@ -999,28 +999,33 @@ def deploy(**kwargs):
     """
     setup_roles(**kwargs)
     notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
+    try:
+        with emit_events('deploy'):
 
-    for start in api.env.on_start:
-        start()
+            for start in api.env.on_start:
+                start()
 
-    for role, host in iterhosts('Deploying to'):
-        with emit_events('all', host, api.env.target, api.env.role_string):
-            with tag('system', 'packages'):
-                install_system_packages()
-            with tag('python', 'packages'):
-                install_python_packages()
+            for role, host in iterhosts('Deploying to'):
+                with emit_events('all', host, api.env.target, api.env.role_string):
+                    with tag('system', 'packages'):
+                        install_system_packages()
+                    with tag('python', 'packages'):
+                        install_python_packages()
 
-            logger.info('Running queued tasks.')
-        run_queued()
+                    logger.info('Running queued tasks.')
+                run_queued()
 
-    for role, host in iterhosts('Setting up firewall on'):
-        with tag('firewall'):
-            apply_firewall()
+            for role, host in iterhosts('Setting up firewall on'):
+                with tag('firewall'):
+                    apply_firewall()
 
-    for stop in api.env.on_stop:
-        stop()
+            for stop in api.env.on_stop:
+                stop()
 
-    notify('Deployed to %s.\nDone.' % ', '.join(api.env.roles), sticky=False)
+            notify('Deployed to %s.\nDone.' % ', '.join(api.env.roles), sticky=False)
+    except:
+        with emit_events('deploy-failed'):
+            logger.exception('Deploy failed!')
 
 
 ### Deploy helpers
