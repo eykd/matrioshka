@@ -997,6 +997,21 @@ def on_hosts(function):
     return wrapper
 
     
+@api.task
+def tags(*tags):
+    api.env.with_tags.clear()
+    api.env.not_tags.clear()
+
+    for tag in tags:
+        if tag.startswith('!'):
+            api.env.not_tags.add(tag[1:])
+        else:
+            api.env.with_tags.add(tag)
+
+    if not api.env.with_tags:
+        api.env.with_tags.add('all')
+
+
 ### Main Deploy task
 @api.task
 @notifies
