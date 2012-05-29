@@ -962,7 +962,7 @@ def setup_roles(**kwargs):
     api.env.roles.sort(lambda a, b: -1 if a == 'all' else cmp(a, b))
 
 
-def iterhosts(verb=''):
+def iterhosts(verb='', skip_roles=(), skip_hosts=()):
     for role in api.env.roles:
         logger.info("###########################################")
         logger.info("##### %s Role: %s", verb, role)
@@ -970,10 +970,16 @@ def iterhosts(verb=''):
         logger.info("###########################################")
         notify('%s Role: %s' % (verb, role), sticky=False)
         api.env.role_string = role
+
+        if role in skip_roles:
+            continue
         
         for host in api.env.roledefs[api.env.role_string]:
             notify('%s %s as role %s' % (verb, host, role), sticky=False)
 
+            if host in skip_hosts:
+                continue
+            
             with api.settings(host_string=host):
                 yield role, host
 
