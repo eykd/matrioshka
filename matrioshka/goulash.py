@@ -1021,13 +1021,13 @@ def deploy(**kwargs):
     setup_roles(**kwargs)
     notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
     try:
-        with emit_events('deploy'):
+        with emit_events(api.env.target, 'deploy'):
 
             for start in api.env.on_start:
                 start()
 
             for role, host in iterhosts('Deploying to'):
-                with emit_events('all', host, api.env.target, api.env.role_string):
+                with emit_events('all', host, api.env.role_string):
                     with tag('system', 'packages'):
                         install_system_packages()
                     with tag('python', 'packages'):
