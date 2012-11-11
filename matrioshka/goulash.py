@@ -1106,19 +1106,25 @@ def apply_firewall():
             sudo('ufw reload')
 
 
-@notifies
 @api.task
-def maintenance_on():
+@notifies
+def maintenance_on(**kwargs):
     """Turn on maintenance mode.
     """
+    setup_roles(**kwargs)
+    for role, host in iterhosts('Deploying to'):
+        notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
     before_events('maintenance')
 
 
-@notifies
 @api.task
-def maintenance_off():
+@notifies
+def maintenance_off(**kwargs):
     """Turn off maintenance mode.
     """
+    setup_roles(**kwargs)
+    notify('Deploying to %s.'% ', '.join(api.env.roles), sticky=False)
+    for role, host in iterhosts('Deploying to'):
     after_events('maintenance')
 
 
