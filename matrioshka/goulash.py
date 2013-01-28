@@ -1055,8 +1055,9 @@ def install_system_packages():
     """Install system packages.
     """
     update_by_default = api.env.get('update_system', True)
-    if api.env.setdefault('roles_update_system', defaultdict(lambda: update_by_default))[api.env.role_string]:
-        package_update()
+    update_packages = api.env.setdefault(
+           'roles_update_system',
+           defaultdict(lambda: update_by_default))[api.env.role_string]
     packages = api.env.system_packages.get(api.env.role_string, ())
 
     with emit_events(*packages):
@@ -1064,7 +1065,7 @@ def install_system_packages():
         install_packages = api.env.system_packages.get(api.env.role_string, ())
 
         if install_packages:
-            package_install(install_packages)
+            package_install(install_packages, update=update_packages)
 
 
 @notifies
