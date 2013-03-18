@@ -532,20 +532,20 @@ def package_update(package=None):
     """Updates the package database (when no argument) or update the package
     or list of packages given as argument."""
     if package == None:
-        sudo("apt-get --yes update")
+        sudo("apt-get --yes -q update")
     else:
         if not isinstance(package, basestring):
             package = " ".join(package)
-        sudo("apt-get --yes upgrade " + package)
+        sudo("apt-get --yes -q upgrade " + package)
 
 
 def package_install(package, update=False):
     """Installs the given package/list of package, optionnaly updating the package
     database."""
-    if update: sudo("apt-get --yes update")
+    if update: package_update()
     if not isinstance(package, basestring):
         package = " ".join(package)
-    sudo("DEBIAN_FRONTEND=readline apt-get --yes install %s" % (package))
+    sudo("DEBIAN_FRONTEND=readline apt-get --yes -q install %s" % (package))
 
 
 @multiargs
