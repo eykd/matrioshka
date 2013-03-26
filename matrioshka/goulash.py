@@ -487,7 +487,6 @@ def git_ensure_repo(location, remote, commit_id, as_user, as_user_email=None, as
     with mode_sudo():
         dir_ensure(location, owner=as_user)
     with api.cd(location):
-        with tag('git', 'checkout'):
             if not dir_exists('%s/.git' % location):
                 sudo('git init', user=as_user)
             if as_user_email is not None:
