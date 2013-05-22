@@ -270,9 +270,9 @@ def tag(*names):
             except (AssertionError, TypeError):
                 pass
         # logger.warning('<------- RESUMING normal command execution.')
-        
-        
-### Enhancements to fabri.api 
+
+
+### Enhancements to fabri.api
 def run(*args, **kwargs):
     """A wrapper to Fabric's run/sudo commands, using the 'goulash.MODE' global
     to tell wether the command should be run as regular user or sudo."""
@@ -422,7 +422,7 @@ def file_write(location, content, mode=None, owner=None, group=None):
     setting mode/owner/group."""
     # Hides the output, which is especially important
     with context_managers.settings(
-        api.hide('warnings', 'running', 'stdout'), 
+        api.hide('warnings', 'running', 'stdout'),
         warn_only=True
    ):
         # We use bz2 compression
@@ -483,31 +483,41 @@ def git_config(user, email, name, global_config=False):
 
 
 def git_ensure_repo(location, remote, commit_id, as_user, as_user_email=None, as_user_name=None,
-                    force=False, update_submodules=False):
+                    force=False, update_submodules=False, prune=True):
     with mode_sudo():
         dir_ensure(location, owner=as_user)
     with api.cd(location):
-            if not dir_exists('%s/.git' % location):
-                sudo('git init', user=as_user)
-            if as_user_email is not None:
-                git_config(as_user, as_user_email, as_user_name)
+        if not dir_exists('%s/.git' % location):
+            sudo('git init', user=as_user)
+        if as_user_email is not None:
+            git_config(as_user, as_user_email, as_user_name)
 
-            if 'origin' in sudo('git remote', user=as_user):
-                if remote not in sudo('git remote show origin', user=as_user):
-                    sudo('git remote rm origin', user=as_user)
-                    sudo('git remote add origin %s' % remote, user=as_user)
-            else:
+        if 'origin' in sudo('git remote', user=as_user):
+            if remote not in sudo('git remote show origin', user=as_user):
+                sudo('git remote rm origin', user=as_user)
                 sudo('git remote add origin %s' % remote, user=as_user)
+        else:
+            sudo('git remote add origin %s' % remote, user=as_user)
 
-            sudo('git fetch', user=as_user)
-            
-            if force:
-                with api.settings(warn_only=True):
-                    sudo('git stash && git stash clear', user=as_user)
+        sudo('git fetch', user=as_user)
 
-            sudo('git checkout %s' % commit_id, user=as_user)
-            if update_submodules:
-                sudo('git submodule update --init', user=as_user)
+        if prune:
+            sudo('git remote prune origin', user=as_user)
+
+        if force:
+            with api.settings(warn_only=True):
+                sudo('git stash && git stash clear', user=as_user)
+
+        sudo('git checkout %s' % commit_id, user=as_user)
+        if update_submodules:
+            sudo('git submodule update --init', user=as_user)
+
+
+def local_git_tag(location, repository, commit_id, prefix, tag='`date -u \"+%Y-%m-%d-%H%M%s\"`'):
+    with api.lcd(location):
+        api.local('git fetch')
+        api.local('git tag %(prefix)s%(tag)s %(commit_id)s' % locals())
+        api.local('git push --tags %s' % repository)
 
 
 def link_ensure(link, target, mode=None, owner=None, group=None):
@@ -863,7 +873,7 @@ def notifies(sticky=False):
                 msg = "%s\n%s" % (msg, kwargs)
             if getattr(api.env, 'role_string', None):
                 msg = "Role: %s\n%s" % (api.env.role_string, msg)
-            
+
             date(msg, sticky=sticky)
             return func(*args, **kwargs)
 
@@ -933,7 +943,7 @@ def create_psql_db(db, owner='postgres'):
 #         except socket.timeout:
 #             print "Knock..."
 #         time.sleep(1)
-    
+
 
 ### Job queue managers
 def enqueue(priority, func, *args, **kwargs):
@@ -972,13 +982,13 @@ def iterhosts(verb='', skip_roles=(), skip_hosts=()):
 
         if role in skip_roles:
             continue
-        
+
         for host in api.env.roledefs[api.env.role_string]:
             notify('%s %s as role %s' % (verb, host, role), sticky=False)
 
             if host in skip_hosts:
                 continue
-            
+
             with api.settings(host_string=host):
                 yield role, host
 
@@ -995,7 +1005,7 @@ def on_hosts(function):
     wrapper.__doc__ = function.__doc__
     return wrapper
 
-    
+
 @api.task
 def tags(*tags):
     api.env.with_tags.clear()
