@@ -273,6 +273,15 @@ def tag(*names):
 
 
 ### Enhancements to fabri.api
+def local(*args, **kwargs):
+    """A wrapper to Fabric's local command, using the 'goulash.MODE' global
+    to tell wether the command should be suppressed by tags or not."""
+    if MODE == "suppress":
+        return ""
+    else:
+        return api.local(*args, **kwargs)
+
+
 def run(*args, **kwargs):
     """A wrapper to Fabric's run/sudo commands, using the 'goulash.MODE' global
     to tell wether the command should be run as regular user or sudo."""
